@@ -1,4 +1,4 @@
-package twitter
+package twit
 
 import (
 	"github.com/ChimeraCoder/anaconda"
@@ -26,8 +26,13 @@ func init () {
 	api = anaconda.NewTwitterApi(tkn, tknSkrt)
 }
 
-func Tweet (s string) error {
-	_, err := api.PostTweet(fmt.Sprintf("%s on @radioxenu http://tunein.com/radio/Radio-Xenu-s118981/ \n", s), nil)
+// Tweeter lambda type
+type Tweeter func (s string) error
 
-	return err
+// Create lambdas for tweeting
+func MakeTweeter (s string) Tweeter {
+	return func(s2 string) error {
+		_, err := api.PostTweet(fmt.Sprintf("%s %s\n", s2, s), nil)
+		return err
+	}
 }
