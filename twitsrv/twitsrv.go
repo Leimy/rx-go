@@ -4,7 +4,7 @@ package main
 
 import (
 	"flag"
-	twit "github.com/Leimy/icy-metago/twitter"
+	"github.com/Leimy/rx-go/twit"
 	"github.com/mortdeus/go9p"
 	"github.com/mortdeus/go9p/srv"
 	"log"
@@ -20,9 +20,10 @@ type Twitfs struct {
 type TweetFile struct {
 	srv.File
 	data []byte
+	tweeter twit.Tweeter
 }
 
-var addr = flag.String("addr", "./crustysock", "unix domain socket path")
+var addr = flag.String("a", "./crustysock", "unix domain socket path")
 var debug = flag.Int("d", 0, "debuglevel")
 var logsz = flag.Int("l", 2048, "log size")
 var tsrv Twitfs
@@ -36,7 +37,11 @@ func (t *TweetFile) Write(fid *srv.FFid, buf []byte, offset uint64) (int, error)
 }
 
 func (t *TweetFile) Clunk(fid *srv.FFid) error {
-	go twit.Tweet(string(t.data))
+	go func () {
+		if err := t.tweeter(string(t.data)); err != nil {
+			log.Printf("Error tweeting: %s\n", err)
+		}
+	}()
 	log.Printf("Clunk: %p\n", fid)
 	return nil
 }
@@ -54,6 +59,8 @@ func main() {
 	}
 
 	twitterentry := new(TweetFile)
+	twitterentry.tweeter = twit.MakeTweeter("on @radioxenu http://tunein.com/radio/Radio-Xenu-s118981/")
+	
 	err = twitterentry.Add(root, "tweet", go9p.OsUsers.Uid2User(os.Geteuid()), nil, 0600, twitterentry)
 	if err != nil {
 		log.Panic(err)
