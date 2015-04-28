@@ -23,11 +23,33 @@ type TweetFile struct {
 	tweeter twit.Tweeter
 }
 
+func NewTweetFile(root *srv.File, name string, user go9p.User, group go9p.Group, mode uint32, template string) (error, *TweetFile) {
+	twitterentry := new(TweetFile)
+	twitterentry.tweeter = twit.MakeTweeter(template)
+	err := twitterentry.Add(root, name, user, group, mode, twitterentry)
+	if err != nil {
+		return err, nil
+	}
+	return nil, twitterentry
+}
+
+const METADATA_SFX string = "on @radioxenu http://tunein.com/radio/Radio-Xenu-s118981/"
+
 var addr = flag.String("a", "./crustysock", "unix domain socket path")
 var debug = flag.Int("d", 0, "debuglevel")
 var logsz = flag.Int("l", 2048, "log size")
 var tsrv Twitfs
+var root *srv.File
 
+func init () {
+	flag.Parse()
+	tsrv.user = go9p.OsUsers.Uid2User(os.Geteuid())
+	tsrv.group = go9p.OsUsers.Gid2Group(os.Getegid())
+	root = new(srv.File)
+	if err := root.Add(nil, "/", tsrv.user, nil, go9p.DMDIR|0555, nil); err != nil {
+		log.Panic(err)
+	}
+}
 
 // technically we should be reading the data into a buffer for this file
 // and when it gets Clunked, send the message
@@ -46,26 +68,7 @@ func (t *TweetFile) Clunk(fid *srv.FFid) error {
 	return nil
 }
 
-func main() {
-	flag.Parse()
-
-	tsrv.user = go9p.OsUsers.Uid2User(os.Geteuid())
-	tsrv.group = go9p.OsUsers.Gid2Group(os.Getegid())
-
-	root := new(srv.File)
-	err := root.Add(nil, "/", tsrv.user, nil, go9p.DMDIR|0555, nil)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	twitterentry := new(TweetFile)
-	twitterentry.tweeter = twit.MakeTweeter("on @radioxenu http://tunein.com/radio/Radio-Xenu-s118981/")
-	
-	err = twitterentry.Add(root, "tweet", go9p.OsUsers.Uid2User(os.Geteuid()), nil, 0600, twitterentry)
-	if err != nil {
-		log.Panic(err)
-	}
-
+func start_service () {
 	l := go9p.NewLogger(*logsz)
 
 	tsrv.srv = srv.NewFileSrv(root)
@@ -76,10 +79,18 @@ func main() {
 	tsrv.srv.Id = "tweetfs"
 	tsrv.srv.Log = l
 
-	err = tsrv.srv.StartNetListener("unix", *addr)
+	err := tsrv.srv.StartNetListener("unix", *addr)
 	if err != nil {
 		log.Panic(err)
 	}
+}
 
+func main() {
+	if err, _ := NewTweetFile(root, "metadata", tsrv.user, tsrv.group, 0600, METADATA_SFX); err != nil {
+		log.Panicf("Failed to allocate metadata endpoint: %v\n", err)
+	}
+
+	start_service()
+	
 	return
 }
