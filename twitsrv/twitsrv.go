@@ -74,6 +74,11 @@ func (t *TweetFile) Clunk(fid *srv.FFid) error {
 	return nil
 }
 
+func (t *TweetFile) Remove(fid *srv.FFid) error {
+	return nil
+}
+
+
 func (tff *TweetFileFactory) Write(fid *srv.FFid, buf []byte, offset uint64) (int, error) {
 	tff.data = append(tff.data, buf...)
 	return len(buf), nil
@@ -92,7 +97,6 @@ func (tff *TweetFileFactory) Clunk(fid *srv.FFid) error {
 	}
 	return nil
 }
-
 
 func start_service () {
 	l := go9p.NewLogger(*logsz)
