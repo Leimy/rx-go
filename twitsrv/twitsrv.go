@@ -1,5 +1,4 @@
 // twitter service for 9p
-
 package main
 
 import (
@@ -12,24 +11,32 @@ import (
 	"strings"
 )
 
+// Describes the file system we serve up to host
+// Twitter capabilities for the metabot
 type Twitfs struct {
 	srv   *srv.Fsrv
 	user  go9p.User
 	group go9p.Group
 }
 
+// Describes an individual file we serve in the
+// file system.
 type TweetFile struct {
 	srv.File
 	data []byte
 	tweeter twit.Tweeter
 }
 
+// A data structure to track the state of the
+// "creator" file which exists to set up other files.
 type TweetFileFactory struct {
 	srv.File
 	data []byte
 }
 
-func NewTweetFile(root *srv.File, name string, user go9p.User, group go9p.Group, mode uint32, template string) (error, *TweetFile) {
+// The common functions that are involved with creating
+// a regular tweeting endpoint.
+func NewTweetFile(name string, user go9p.User, group go9p.Group, mode uint32, template string) (error, *TweetFile) {
 	twitterentry := new(TweetFile)
 	twitterentry.tweeter = twit.MakeTweeter(template)
 	err := twitterentry.Add(root, name, user, group, mode, twitterentry)
@@ -39,14 +46,17 @@ func NewTweetFile(root *srv.File, name string, user go9p.User, group go9p.Group,
 	return nil, twitterentry
 }
 
+// Just a constant for metadata
 const METADATA_SFX string = "on @radioxenu http://tunein.com/radio/Radio-Xenu-s118981/"
 
+// Command line argument parsing and defaults
 var addr = flag.String("a", "./crustysock", "unix domain socket path")
 var debug = flag.Int("d", 0, "debuglevel")
 var logsz = flag.Int("l", 2048, "log size")
 var tsrv Twitfs
 var root *srv.File
 
+// Runs one time when the module loads... initializes stuff (hence the name)
 func init () {
 	flag.Parse()
 	tsrv.user = go9p.OsUsers.Uid2User(os.Geteuid())
@@ -57,13 +67,16 @@ func init () {
 	}
 }
 
-// technically we should be reading the data into a buffer for this file
-// and when it gets Clunked, send the message
+// When a client writes to a tweet file, we capture the bytes, and handle them
+// in Clunk
 func (t *TweetFile) Write(fid *srv.FFid, buf []byte, offset uint64) (int, error) {
 	t.data = append(t.data, buf...)
 	return len(buf), nil
 }
 
+// When the client decides it's done with this TweetFile, we run this action
+// It run the set up tweeter function on the stringified form of the bytes
+// it has collected.
 func (t *TweetFile) Clunk(fid *srv.FFid) error {
 	go func () {
 		if err := t.tweeter(string(t.data)); err != nil {
@@ -74,16 +87,22 @@ func (t *TweetFile) Clunk(fid *srv.FFid) error {
 	return nil
 }
 
+// This simply says "we'll allow you to delete this file"
 func (t *TweetFile) Remove(fid *srv.FFid) error {
 	return nil
 }
 
-
+// When someone writes to the creator file, we capture the bytes
+// we'll deal with them in Clunk
 func (tff *TweetFileFactory) Write(fid *srv.FFid, buf []byte, offset uint64) (int, error) {
 	tff.data = append(tff.data, buf...)
 	return len(buf), nil
 }
 
+// When the creator is Clunk'd by the client, we try to process the formatted string
+// newfilename|suffix string for tweet
+// And if successful, you get a new TweetFile you can write to that appends "suffix string for tweet"
+// to the message before sending to twitter.
 func (tff *TweetFileFactory) Clunk(fid *srv.FFid) error {
 	s := string(tff.data)
 	all := strings.SplitN(s, "|", 2)
@@ -91,12 +110,13 @@ func (tff *TweetFileFactory) Clunk(fid *srv.FFid) error {
 	if len(all) != 2 {
 		log.Printf("Illegal request, ignoring: %s\n", s)
 	} else {
-		if err, _ := NewTweetFile(root, all[0], tsrv.user, tsrv.group, 0600, all[1]); err != nil {
+		if err, _ := NewTweetFile(all[0], tsrv.user, tsrv.group, 0600, all[1]); err != nil {
 			log.Printf("Failed to allocate: %s for %s\n", all[0], all[1])
 		}
 	}
 	return nil
 }
+
 
 func start_service () {
 	l := go9p.NewLogger(*logsz)
