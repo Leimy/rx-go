@@ -9,6 +9,8 @@ import (
 	"log"
 	"os"
 	"strings"
+	"fmt"
+	"errors"
 )
 
 // Describes the file system we serve up to host
@@ -84,6 +86,7 @@ func (t *TweetFile) Clunk(fid *srv.FFid) error {
 		}
 	}()
 	log.Printf("Clunk: %p\n", fid)
+	t.data = []byte{}
 	return nil
 }
 
@@ -103,18 +106,21 @@ func (tff *TweetFileFactory) Write(fid *srv.FFid, buf []byte, offset uint64) (in
 // newfilename|suffix string for tweet
 // And if successful, you get a new TweetFile you can write to that appends "suffix string for tweet"
 // to the message before sending to twitter.
-func (tff *TweetFileFactory) Clunk(fid *srv.FFid) error {
+func (tff *TweetFileFactory) Clunk(fid *srv.FFid) (err error) {
 	s := string(tff.data)
 	all := strings.SplitN(s, "|", 2)
-	
+
 	if len(all) != 2 {
-		log.Printf("Illegal request, ignoring: %s\n", s)
+		s := fmt.Sprintf("Illegal reqeust, ignoring: %s", s)
+		log.Printf("%s\n", s)
+		err = errors.New(s)
 	} else {
 		if err, _ := NewTweetFile(all[0], tsrv.user, tsrv.group, 0600, all[1]); err != nil {
 			log.Printf("Failed to allocate: %s for %s\n", all[0], all[1])
 		}
 	}
-	return nil
+	tff.data = []byte{}
+	return err
 }
 
 
@@ -142,7 +148,7 @@ func main() {
 		log.Panicf("Failed to create the creator: %v\n", err)
 	}
 	
-	if err, _ := NewTweetFile(root, "metadata", tsrv.user, tsrv.group, 0600, METADATA_SFX); err != nil {
+	if err, _ := NewTweetFile("metadata", tsrv.user, tsrv.group, 0600, METADATA_SFX); err != nil {
 		log.Panicf("Failed to allocate metadata endpoint: %v\n", err)
 	}
 
