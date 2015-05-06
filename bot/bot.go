@@ -161,7 +161,7 @@ func (b *Bot) loop() {
 }
 
 func bot(room, name, serverAndport string, lines chan <- string) error {
-
+	defer close(lines)
 	log.Printf("IRC bot connecting to %s as %s to channel %s\n",
 		serverAndport, name, room)
 	conn, err := net.Dial("tcp4", serverAndport)
