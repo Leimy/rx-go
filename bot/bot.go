@@ -184,7 +184,7 @@ func bot(room, name, serverAndport string, lines chan <- string) error {
 	return nil
 }
 
-// Doesn't return.
+// Doesn't return until the bot loop terminates or crashes
 func NewBot(room, name, serverAndPort string, lines chan <- string) error {
 	return bot(room, name, serverAndPort, lines)
 }
