@@ -13,7 +13,7 @@ func main() {
 		}
 	}()
 
-	for s := range(c) {
+	for s := range c {
 		fmt.Printf("Got data: %s\n", s)
 	}
 }
