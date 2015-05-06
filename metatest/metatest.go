@@ -12,6 +12,6 @@ func main () {
 	}
 
 	for s := range ch {
-		fmt.Print(s)
+		fmt.Print(s, "\n")
 	}
 }
