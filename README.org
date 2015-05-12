@@ -45,7 +45,7 @@ commands with ?? like we're doing now, and forward all of those to a given names
 are internal, which cause the bot to change behaviors on metadata changes:
 
 1. ?autotweet?  - tweet when metadata changes
-2. ?autolast? - announce in the channel when the metadata changes
+2. ?autolast? - announce in the channel when the metadata changes (with timeout)
 3. ?tweet? - tweet right now, regardless of autotweet settings.
 4. ?lastsong? - announce the current song in the chat.
 
