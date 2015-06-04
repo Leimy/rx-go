@@ -10,11 +10,11 @@ import (
 )
 
 type Bot struct {
+	*bufio.Reader
+	*bufio.Writer
 	room          string
 	name          string
 	serverAndPort string
-	bior          *bufio.Reader
-	biow          *bufio.Writer
 	linesOut      chan <- string
 }
 
@@ -23,6 +23,7 @@ var actionRegExp *regexp.Regexp
 var chanAndMessageRegExp *regexp.Regexp
 
 func init() {
+	// TODO: THIS IS MOSTLY CRAP... DO IT AGAIN LATER!
 	// if this matches it produces string slices size 6
 	// 0 is the whole string that matched
 	// 1 is the nickname
@@ -35,23 +36,6 @@ func init() {
 }
 
 
-// Interfaces we want to implement for Bot allowing Scanners
-// fmt.Fprintf etc to work.
-func (b *Bot) Write(data []byte) (int, error) {
-	return b.biow.Write(data)
-}
-
-func (b *Bot) Read(data []byte) (int, error) {
-	return b.bior.Read(data)
-}
-
-func (b *Bot) ReadLine() ([]byte, bool, error) {
-	return b.bior.ReadLine()
-}
-
-func (b *Bot) Flush() error {
-	return b.biow.Flush()
-}
 
 // Just some setup stuff for getting into the channel
 func (b *Bot) loginstuff() {
@@ -171,11 +155,11 @@ func bot(room, name, serverAndport string, lines chan <- string) error {
 	log.Print("Done connecting")
 
 	bot := &Bot{
+		bufio.NewReader(conn),
+		bufio.NewWriter(conn),
 		room,
 		name,
 		serverAndport,
-		bufio.NewReader(conn),
-		bufio.NewWriter(conn),
 		lines}
 
 	bot.loginstuff()

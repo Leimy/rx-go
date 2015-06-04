@@ -12,7 +12,7 @@ import (
 )
 
 
-var streamaddr = flag.String("s", "http://radioxenu.com:8000", "Music Stream URL")
+var streamaddr = flag.String("s", "http://radioxenu.com:8000/relay", "Music Stream URL")
 var addr = flag.String("a", "./metasock", "unix domain socket path")
 var debug = flag.Int("d", 0, "debuglevel")
 var logsz = flag.Int("l", 2048, "log size")
@@ -119,6 +119,9 @@ func serve () {
 	msrv.srv.Start(msrv.srv)
 	msrv.srv.Id = "metafs"
 	msrv.srv.Log = l
+	
+	// rm unix socket
+	os.Remove(*addr)
 
 	if err := msrv.srv.StartNetListener("unix", *addr); err != nil {
 		log.Panic(err)

@@ -135,6 +135,8 @@ func start_service () {
 	tsrv.srv.Id = "tweetfs"
 	tsrv.srv.Log = l
 
+	os.Remove(*addr)
+
 	err := tsrv.srv.StartNetListener("unix", *addr)
 	if err != nil {
 		log.Panic(err)
