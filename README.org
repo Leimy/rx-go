@@ -7,8 +7,6 @@
 2. Communicate between components over Unix Domain Sockets with 9p
 3. Administer whole grid via 9p/REST
 
-Try go9p for the 9p Implementation
-
 ** Twitter forwarder
 Listens for requests to tweet, and does so.  Unix domain socket security.
 Authenticates the same way metabot does today.  If it dies, just restart it, basically no state.
@@ -41,18 +39,21 @@ and commands.  The biggest change will be the way we extend the bot
 
 *** Bot Extensibility
 The bot is a client of the metadata service as well as the twitter forwarder, generically we can surround
-commands with ?? like we're doing now, and forward all of those to a given namespace serving 9p.  Some commands
-are internal, which cause the bot to change behaviors on metadata changes:
+commands with ?? like we're doing now, and forward all of those to a given namespace serving 9p. 
 
-1. ?autotweet?  - tweet when metadata changes
-2. ?autolast? - announce in the channel when the metadata changes (with timeout)
+Re-thought the "some commands are internal" idea.  Now I think that we can pre-load these through
+bot-extensibility via a 9p interface as well.
+
+We can provide a script to pre-load these, but need a way to describe events
+
+1. ?autotweet?  - tweet when metadata changes (metadata change event) (with timeout)
+2. ?autolast? - announce in the channel when the metadata changes (metadata change event) (with timeout)
 3. ?tweet? - tweet right now, regardless of autotweet settings.
 4. ?lastsong? - announce the current song in the chat.
 
-We should be able to have the bot extended by a pattern recognition -> action list.
+To implement these we need a way to describe "on metadata change" and "timeout" events.
 
-This would be useful for top40 vote counting perhaps.  We should talk about voting.
-
+We can add 9p scrtiptable behaviors as we move forward.
 
 
 
