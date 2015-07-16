@@ -2,11 +2,11 @@ package meta
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
-	"errors"
 )
 
 func parseIcy(rdr *bufio.Reader, c byte) (string, error) {
@@ -50,6 +50,8 @@ func extractMetadata(rdr io.Reader, skip int) <-chan string {
 	return ch
 }
 
+// StreamMeta takes a url to stream frun and returns a channel of metadata
+// strings or an error.
 func StreamMeta(url string) (<-chan string, error) {
 	client := &http.Client{}
 
