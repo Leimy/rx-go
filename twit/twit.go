@@ -1,15 +1,16 @@
 package twit
 
 import (
-	"github.com/ChimeraCoder/anaconda"
 	"bufio"
-	"os"
 	"fmt"
+	"os"
+
+	"github.com/ChimeraCoder/anaconda"
 )
 
 var api *anaconda.TwitterApi
 
-func init () {
+func init() {
 	f, err := os.Open("CREDENTIALS")
 	if err != nil {
 		panic(err)
@@ -26,11 +27,11 @@ func init () {
 	api = anaconda.NewTwitterApi(tkn, tknSkrt)
 }
 
-// Tweeter lambda type
-type Tweeter func (s string) error
+// Tweeter is a lambda type
+type Tweeter func(s string) error
 
-// Create lambdas for tweeting
-func MakeTweeter (s string) Tweeter {
+// MakeTweeter creates lambdas for tweeting
+func MakeTweeter(s string) Tweeter {
 	return func(s2 string) error {
 		_, err := api.PostTweet(fmt.Sprintf("%s %s\n", s2, s), nil)
 		return err

@@ -2,15 +2,15 @@
 package main
 
 import (
+	"errors"
 	"flag"
+	"log"
+	"os"
+
 	"github.com/Leimy/rx-go/meta"
 	"github.com/mortdeus/go9p"
 	"github.com/mortdeus/go9p/srv"
-	"log"
-	"os"
-	"errors"
 )
-
 
 var streamaddr = flag.String("s", "http://radioxenu.com:8000/relay", "Music Stream URL")
 var addr = flag.String("a", "./metasock", "unix domain socket path")
@@ -19,7 +19,7 @@ var logsz = flag.Int("l", 2048, "log size")
 var msrv Metafs
 var root *srv.File
 
-func init () {
+func init() {
 	flag.Parse()
 	msrv.user = go9p.OsUsers.Uid2User(os.Geteuid())
 	msrv.group = go9p.OsUsers.Gid2Group(os.Getegid())
@@ -29,15 +29,14 @@ func init () {
 	}
 }
 
-
-// Describes the file system interface itself
+// Metafs describes the file system interface itself
 type Metafs struct {
-	srv *srv.Fsrv
-	user go9p.User
+	srv   *srv.Fsrv
+	user  go9p.User
 	group go9p.Group
 }
 
-// Read-only file for accessing metadata
+// MetaFile is a read-only file for accessing metadata
 type MetaFile struct {
 	srv.File
 	S *service
@@ -49,16 +48,16 @@ type service struct {
 	e error
 }
 
-func new_service (mf *MetaFile) (*service,  error) {
+func newService(mf *MetaFile) (*service, error) {
 	s := new(service)
 	s.s = ""
-	
+
 	c, err := meta.StreamMeta(*streamaddr)
 	if err != nil {
 		return nil, err
 	}
-	go func () {
-		
+	go func() {
+
 		for cur := range c {
 			s.s = cur
 			log.Printf("%s\n", s.s)
@@ -70,18 +69,17 @@ func new_service (mf *MetaFile) (*service,  error) {
 		}
 		s.e = errors.New("Metadata stream terminated")
 	}()
-	
+
 	return s, nil
 }
 
-func (s *service) last () string {
+func (s *service) last() string {
 	return s.s
 }
 
-func (s *service) err () error {
+func (s *service) err() error {
 	return s.e
 }
-
 
 func (m *MetaFile) Read(fid *srv.FFid, buf []byte, offset uint64) (int, error) {
 	m.Lock()
@@ -96,7 +94,7 @@ func (m *MetaFile) Read(fid *srv.FFid, buf []byte, offset uint64) (int, error) {
 	err := m.S.err()
 	if m.S.err() != nil {
 		// if it's busted, try to re-initialize it
-		if m.S, err = new_service(m); err != nil {
+		if m.S, err = newService(m); err != nil {
 			// or fail
 			return 0, err
 		}
@@ -105,11 +103,11 @@ func (m *MetaFile) Read(fid *srv.FFid, buf []byte, offset uint64) (int, error) {
 
 	// get last string
 	lastsong := []byte(m.S.last())
-	
-	return copy(buf, lastsong[int(offset):]) , nil
+
+	return copy(buf, lastsong[int(offset):]), nil
 }
 
-func serve () {
+func serve() {
 	l := go9p.NewLogger(*logsz)
 
 	msrv.srv = srv.NewFileSrv(root)
@@ -119,26 +117,25 @@ func serve () {
 	msrv.srv.Start(msrv.srv)
 	msrv.srv.Id = "metafs"
 	msrv.srv.Log = l
-	
+
 	// rm unix socket
 	os.Remove(*addr)
 
 	if err := msrv.srv.StartNetListener("unix", *addr); err != nil {
 		log.Panic(err)
 	}
-}	
+}
 
-func main () {
+func main() {
 	entry := new(MetaFile)
 	var err error
-	if entry.S, err = new_service(entry); err != nil {
+	if entry.S, err = newService(entry); err != nil {
 		log.Panic(err)
 	}
 
 	if err := entry.Add(root, "metadata", msrv.user, msrv.group, 0400, entry); err != nil {
 		log.Panicf("Failed to create metadata: %v\n", err)
 	}
-	
 
 	serve()
 

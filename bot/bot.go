@@ -3,19 +3,20 @@ package bot
 import (
 	"bufio"
 	"fmt"
-	"net"
 	"log"
+	"net"
 	"regexp"
 	"strings"
 )
 
+// The Bot type.  Only thing exported from this module.
 type Bot struct {
 	*bufio.Reader
 	*bufio.Writer
 	room          string
 	name          string
 	serverAndPort string
-	linesOut      chan <- string
+	linesOut      chan<- string
 }
 
 var userRegExp *regexp.Regexp
@@ -35,8 +36,6 @@ func init() {
 	chanAndMessageRegExp = regexp.MustCompile("^:([[:print:]]+)!.*PRIVMSG (#[[:print:]]+) :[0-9]*(ACTION )?[^[:digit:]]*?([[:print:]]+)$")
 }
 
-
-
 // Just some setup stuff for getting into the channel
 func (b *Bot) loginstuff() {
 	fmt.Fprintf(b, "NICK %s\r\n", b.name)
@@ -46,7 +45,6 @@ func (b *Bot) loginstuff() {
 		log.Panic(err)
 	}
 }
-
 
 // Filter returns a new slice holding only
 // the elements of s that satisfy f()
@@ -71,11 +69,11 @@ func filterPrintable(s []byte) []byte {
 }
 
 func (b *Bot) fromIRC(completeSChan chan<- string) {
+	defer close(completeSChan)
 	scanner := bufio.NewScanner(b)
 	for scanner.Scan() {
 		completeSChan <- string(filterPrintable([]byte(scanner.Text())))
 	}
-	close(completeSChan)
 }
 
 func (b *Bot) parseTokens(lines []string) string {
@@ -136,15 +134,14 @@ func (b *Bot) loop() {
 		select {
 		case line := <-completeSChan:
 			if line == "" {
-				return  // does exit and cleanup
-			} else {
-				lchan <- line // feed lines to processor
+				return // does exit and cleanup
 			}
+			lchan <- line // feed lines to processor
 		}
 	}
 }
 
-func bot(room, name, serverAndport string, lines chan <- string) error {
+func bot(room, name, serverAndport string, lines chan<- string) error {
 	defer close(lines)
 	log.Printf("IRC bot connecting to %s as %s to channel %s\n",
 		serverAndport, name, room)
@@ -168,7 +165,7 @@ func bot(room, name, serverAndport string, lines chan <- string) error {
 	return nil
 }
 
-// Doesn't return until the bot loop terminates or crashes
-func NewBot(room, name, serverAndPort string, lines chan <- string) error {
+// NewBot Doesn't return until the bot loop terminates or crashes
+func NewBot(room, name, serverAndPort string, lines chan<- string) error {
 	return bot(room, name, serverAndPort, lines)
 }

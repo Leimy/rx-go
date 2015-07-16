@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/Leimy/rx-go/meta"
 	"fmt"
+
+	"github.com/Leimy/rx-go/meta"
 )
 
-func main () {
+func main() {
 	ch, err := meta.StreamMeta("http://radioxenu.com:8000/relay")
 	if err != nil {
 		panic(err)
