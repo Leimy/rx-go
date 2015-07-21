@@ -25,23 +25,23 @@ func parseIcy(rdr *bufio.Reader, c byte) (string, error) {
 func extractMetadata(rdr io.Reader, skip int) <-chan string {
 	ch := make(chan string)
 	go func() {
+		defer close(ch)
 		bufrdr := bufio.NewReaderSize(rdr, skip)
 		for {
 			skipbytes := make([]byte, skip)
 
 			_, err := io.ReadFull(bufrdr, skipbytes)
 			if err != nil {
-				close(ch)
-				break
+				return
 			}
 			c, err := bufrdr.ReadByte()
 			if err != nil {
-				close(ch)
+				return
 			}
 			if c > 0 {
 				meta, err := parseIcy(bufrdr, c)
 				if err != nil {
-					close(ch)
+					return
 				}
 				ch <- meta
 			}
