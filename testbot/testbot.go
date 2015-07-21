@@ -7,14 +7,15 @@ import (
 )
 
 func main() {
-	c := make(chan string)
+	cout := make(chan string)
+	cin := make(chan string)
 	go func() {
-		if err := bot.NewBot("#radioxenu", "testbot", "irc.radioxenu.com:6667", c); err != nil {
+		if err := bot.NewBot("#radioxenu", "testbot", "irc.radioxenu.com:6667", cout, cin); err != nil {
 			panic(err)
 		}
 	}()
 
-	for s := range c {
+	for s := range cout {
 		fmt.Printf("Got data: %s\n", s)
 	}
 }

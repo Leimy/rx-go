@@ -17,6 +17,7 @@ type Bot struct {
 	name          string
 	serverAndPort string
 	linesOut      chan<- string
+	linesIn       <-chan string
 }
 
 var userRegExp *regexp.Regexp
@@ -141,8 +142,8 @@ func (b *Bot) loop() {
 	}
 }
 
-func bot(room, name, serverAndport string, lines chan<- string) error {
-	defer close(lines)
+func bot(room, name, serverAndport string, linesOut chan<- string, linesIn <-chan string) error {
+	defer close(linesOut)
 	log.Printf("IRC bot connecting to %s as %s to channel %s\n",
 		serverAndport, name, room)
 	conn, err := net.Dial("tcp4", serverAndport)
@@ -157,7 +158,8 @@ func bot(room, name, serverAndport string, lines chan<- string) error {
 		room,
 		name,
 		serverAndport,
-		lines}
+		linesOut,
+		linesIn}
 
 	bot.loginstuff()
 	bot.loop()
@@ -166,6 +168,6 @@ func bot(room, name, serverAndport string, lines chan<- string) error {
 }
 
 // NewBot Doesn't return until the bot loop terminates or crashes
-func NewBot(room, name, serverAndPort string, lines chan<- string) error {
-	return bot(room, name, serverAndPort, lines)
+func NewBot(room, name, serverAndPort string, linesIn chan<- string, linesOut <-chan string) error {
+	return bot(room, name, serverAndPort, linesIn, linesOut)
 }
