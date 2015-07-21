@@ -13,6 +13,7 @@ import (
 type Bot struct {
 	*bufio.Reader
 	*bufio.Writer
+	conn          net.Conn
 	room          string
 	name          string
 	serverAndPort string
@@ -43,6 +44,7 @@ func (b *Bot) loginstuff() {
 	fmt.Fprintf(b, "USER %s 0 * :tutorial bot\r\n", b.name)
 	fmt.Fprintf(b, "JOIN %s\r\n", b.room)
 	if err := b.Flush(); err != nil {
+		// TODO: Find a less crashy way to signal failure
 		log.Panic(err)
 	}
 }
@@ -69,6 +71,8 @@ func filterPrintable(s []byte) []byte {
 	return p
 }
 
+// fromIRC scans tokens, filtering out bytes we don't want
+// sends the data to the provided channel
 func (b *Bot) fromIRC(completeSChan chan<- string) {
 	defer close(completeSChan)
 	scanner := bufio.NewScanner(b)
@@ -95,7 +99,6 @@ func (b *Bot) parseTokens(lines []string) string {
 
 // process each line
 func (b *Bot) procLine(line string) {
-
 	// Handle PING so we don't get hung up on.
 	if strings.HasPrefix(line, "PING :") {
 		resp := strings.Replace(line, "PING", "PONG", 1)
@@ -107,6 +110,7 @@ func (b *Bot) procLine(line string) {
 		}
 	}
 	if err := b.Flush(); err != nil {
+		// TODO: signal an error in a better, less-crashy way
 		log.Panic(err)
 	}
 }
@@ -114,7 +118,8 @@ func (b *Bot) procLine(line string) {
 func (b *Bot) loop() {
 	completeSChan := make(chan string)
 
-	// Receives lines, dropping things we don't
+	// Receives lines, dropping things we don't want.
+	// terminates when we close the connection.
 	go b.fromIRC(completeSChan)
 
 	lchan := make(chan string)
@@ -131,13 +136,26 @@ func (b *Bot) loop() {
 		}
 	}()
 
+	defer b.conn.Close()
+	// Get every line fromIRC (completeSChan)
+	// send it to the asynchronous processeor anonymous
+	// goroutine above.  Alternate between that and input
+	// from external code to be sent to IRC.
 	for {
 		select {
 		case line := <-completeSChan:
 			if line == "" {
-				return // does exit and cleanup
+				log.Printf("No input, shutting down")
+				return
 			}
 			lchan <- line // feed lines to processor
+		case incoming, ok := <-b.linesIn:
+			if ok {
+				fmt.Fprintf(b, "%s\r\n", incoming)
+			} else {
+				log.Printf("Bot requested to shut down")
+				return
+			}
 		}
 	}
 }
@@ -155,6 +173,7 @@ func bot(room, name, serverAndport string, linesOut chan<- string, linesIn <-cha
 	bot := &Bot{
 		bufio.NewReader(conn),
 		bufio.NewWriter(conn),
+		conn,
 		room,
 		name,
 		serverAndport,
