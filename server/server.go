@@ -3,75 +3,34 @@ package main
 import (
 	"fmt"
 	"io"
-	"time"
 
 	"log"
 	"net/http"
 
-	"github.com/Leimy/rx-go/meta"
+	"github.com/Leimy/rx-go/nowplaying"
 	"github.com/Leimy/rx-go/twit"
 )
 
-// The main service shuts down here
-var shutdown chan byte
+var nowPlaying *nowplaying.NowPlaying
 
-// Start up the metadata ripping service.
-// Make a metadata extractor/forwarder to send it to
-// When metadata is requested, forward the last known
-// song to it.  The handler function can detect when the
-// extractor is not running, and can repair/restart it.
-// Only call this one time.
-func startMeta() {
-	metadataExtractor := func(metachan chan<- string) {
-		ch, _ := meta.StreamMeta("http://radioxenu.com:8000/relay")
-		defer close(metachan)
-		metadata := ""
-		ok := true
-		for {
-			select {
-			case metadata, ok = (<-ch):
-				if ok {
-					log.Printf("Got new metadata: %s", metadata)
-				} else {
-					log.Printf("Metadata stream closed")
-
-					return
-				}
-			case metachan <- metadata:
-				log.Printf("Sent requested metadata: %s", metadata)
-			}
-		}
-	}
-
-	metachan := make(chan string)
-	go metadataExtractor(metachan)
-
+// Set up the metadata handler
+func handleMeta() {
 	http.HandleFunc("/metadata", func(w http.ResponseWriter, r *http.Request) {
-		again := true
-		for again {
-			select {
-			case nowPlaying, ok := <-metachan:
-				if !ok {
-					log.Printf("metadataExtractor is not running.  Start it.")
-					metachan = make(chan string)
-					go metadataExtractor(metachan)
-					nowPlaying = ""
-				} else {
-					if nowPlaying == "" {
-						time.Sleep(2 * time.Second)
-					} else {
-						fmt.Fprintf(w, "Now Playing: %s", nowPlaying)
-						again = false
-					}
-				}
-
+		switch method := r.Method; method {
+		case "GET":
+			curSong := ""
+			for curSong == "" {
+				curSong = nowPlaying.Get()
 			}
+			fmt.Fprintf(w, "Now Playing: %s", curSong)
+		default:
+			log.Printf("%s Not implemented", method)
 		}
 	})
 }
 
 // Call only one time
-func startTwit(uri string) {
+func handleTwit(uri string) {
 	tweeter := twit.MakeTweeter("@radioxenu http://tunein.com/radio/Radio-Xenu-s118981/")
 	var message = make([]byte, 160)
 	http.HandleFunc(uri, func(w http.ResponseWriter, r *http.Request) {
@@ -91,8 +50,9 @@ func startTwit(uri string) {
 }
 
 func init() {
-	startTwit("/tweet")
-	startMeta()
+	nowPlaying = nowplaying.NewNowPlaying("http://radioxenu.com:8000/relay")
+	handleTwit("/tweet")
+	handleMeta()
 }
 
 func main() {
