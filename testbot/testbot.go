@@ -10,12 +10,12 @@ func main() {
 	cout := make(chan string)
 	cin := make(chan string)
 	go func() {
-		if err := bot.NewBot("#radioxenu", "testbot", "irc.radioxenu.com:6667", cout, cin); err != nil {
-			panic(err)
+		for {
+			bot.NewBot("#radioxenu", "testbot", "irc.radioxenu.com:6667", cin, cout)
 		}
 	}()
 
-	for s := range cout {
+	for s := range cin {
 		fmt.Printf("Got data: %s\n", s)
 	}
 }

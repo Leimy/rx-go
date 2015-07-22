@@ -21,8 +21,6 @@ type Bot struct {
 	linesIn       <-chan string
 }
 
-var userRegExp *regexp.Regexp
-var actionRegExp *regexp.Regexp
 var chanAndMessageRegExp *regexp.Regexp
 
 func init() {
@@ -73,6 +71,8 @@ func filterPrintable(s []byte) []byte {
 
 // fromIRC scans tokens, filtering out bytes we don't want
 // sends the data to the provided channel
+// When the scanner errors for any reason we close the channel we were
+// given to write to.
 func (b *Bot) fromIRC(completeSChan chan<- string) {
 	defer close(completeSChan)
 	scanner := bufio.NewScanner(b)
@@ -91,8 +91,6 @@ func (b *Bot) parseTokens(lines []string) string {
 	}
 
 	body := lines[4]
-
-	log.Printf("4 == %q\n", body)
 
 	return body
 }
@@ -143,15 +141,16 @@ func (b *Bot) loop() {
 	// from external code to be sent to IRC.
 	for {
 		select {
-		case line := <-completeSChan:
-			if line == "" {
+		case line, ok := <-completeSChan:
+			if !ok {
 				log.Printf("No input, shutting down")
 				return
 			}
 			lchan <- line // feed lines to processor
 		case incoming, ok := <-b.linesIn:
 			if ok {
-				fmt.Fprintf(b, "%s\r\n", incoming)
+				fmt.Fprintf(b, "PRIVMSG %s :%s\r\n", b.room, incoming)
+				b.Flush()
 			} else {
 				log.Printf("Bot requested to shut down")
 				return
