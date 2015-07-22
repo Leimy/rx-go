@@ -3,25 +3,8 @@
 
 * Ideas for improvement
 
-1. Separate bot, metadata and twitter into components
-2. Communicate between components over REST
-
-** Twitter forwarder
-Listens for requests to tweet, and does so.  Unix domain socket security.
-Authenticates the same way metabot does today.  If it dies, just restart it, basically no state.
-
-Failing to authenticate should restart with backoff.
-
-** Metadata stream
-This should provide a read-only and push-to-subscriber interface to the current song playing/metadata.
-Instability in reading streams has been a problem in the past due to weird formatting in the metadata 
-and a loosely defined standard for what's allowed.  We should be able to fix the stream ripper and 
-restart whenever with no impact to anything else in the system.
-x
-** The Bot
-The bot will do mostly what it's doing today, attempt to connect to IRC, sit in the channel and respond to requests
-and commands.  The biggest change will be the way we extend the bot
+1. Separate bot, metadata and twitter into components (done)
+2. Communicate between components over REST (not done)
 
 *** Bot Extensibility
 TBD for REST (many ideas)
-
