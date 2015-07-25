@@ -18,7 +18,25 @@ var botFrom chan string
 var botTo chan string
 var tweeter twit.Tweeter
 
-// Set up the metadata handler - call once
+// just some counters
+var stats struct {
+	sync.RWMutex
+	botRestarts uint64
+}
+
+func incBotRestarts() {
+	stats.Lock()
+	defer stats.Unlock()
+	stats.botRestarts++
+}
+
+func getBotRestarts() uint64 {
+	stats.RLock()
+	defer stats.RUnlock()
+	return stats.botRestarts
+}
+
+// Set up the metadata handler
 func handleMeta() {
 	http.HandleFunc("/metadata", func(w http.ResponseWriter, r *http.Request) {
 		switch method := r.Method; method {
@@ -53,6 +71,19 @@ func handleTwit(uri string, tweeter twit.Tweeter) {
 	})
 }
 
+// stats
+func handleStats() {
+	http.HandleFunc("/botstats", func(w http.ResponseWriter, r *http.Request) {
+		switch method := r.Method; method {
+		case "GET":
+			fmt.Fprintf(w, "Restart count: %q", getBotRestarts())
+		default:
+			log.Printf("Unsupported method: %s", method)
+		}
+	})
+}
+
+// TODO-Maybe: module for the automatic behaviors. (only this server cares)
 type autoState struct {
 	sync.RWMutex
 	tweet bool
@@ -89,6 +120,8 @@ func (as *autoState) toggleLast() {
 
 var autos *autoState
 
+// Subscribes to nowPlaying, and reads from the subscription
+// Takes actions based on the settings of automatic behaviors
 func metaSubscriber() {
 	updates := make(chan string)
 	nowPlaying.Subscribe(updates)
@@ -105,6 +138,7 @@ func metaSubscriber() {
 	}
 }
 
+// Commands from IRC
 func procLine(line string) {
 	log.Printf("got: %q", line)
 	switch line {
@@ -147,6 +181,7 @@ func init() {
 	tweeter = twit.MakeTweeter("@radioxenu http://tunein.com/radio/Radio-Xenu-s118981/")
 	handleTwit("/tweet", tweeter)
 	handleMeta()
+	handleStats()
 }
 
 func main() {

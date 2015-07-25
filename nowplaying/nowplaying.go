@@ -9,7 +9,8 @@ import (
 )
 
 // NowPlaying represent the song now playing on a Icy-MetaData compatible
-// SHOUT stream
+// SHOUT stream.  Tracks subscribers that want to be notified of metadata
+// updates directly.
 type NowPlaying struct {
 	sync.RWMutex
 	song        string
