@@ -59,7 +59,7 @@ func (np *NowPlaying) StartUpdating() {
 				np.subscribers[c] <- metadata
 			}
 		}
-		log.Printf("Metdata stream closed")
+		log.Printf("Metadata stream closed")
 		time.Sleep(2 * time.Second)
 	}
 }

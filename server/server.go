@@ -18,7 +18,7 @@ var botFrom chan string
 var botTo chan string
 var tweeter twit.Tweeter
 
-// Set up the metadata handler
+// Set up the metadata handler - call once
 func handleMeta() {
 	http.HandleFunc("/metadata", func(w http.ResponseWriter, r *http.Request) {
 		switch method := r.Method; method {
@@ -34,8 +34,8 @@ func handleMeta() {
 	})
 }
 
-// Call only one time
-func handleTwit(uri string) {
+// Call only once per uri
+func handleTwit(uri string, tweeter twit.Tweeter) {
 	var message = make([]byte, 160)
 	http.HandleFunc(uri, func(w http.ResponseWriter, r *http.Request) {
 		switch method := r.Method; method {
@@ -95,6 +95,7 @@ func metaSubscriber() {
 	for {
 		for line := range updates {
 			if autos.getTweet() {
+				// TODO: Use the REST endpoint
 				tweeter(line)
 			}
 			if autos.getLast() {
@@ -110,6 +111,7 @@ func procLine(line string) {
 	case "?lastsong?":
 		botTo <- nowPlaying.Get()
 	case "?tweet?":
+		//TODO: use the REST endpoint
 		tweeter(nowPlaying.Get())
 	case "?autotweet?":
 		autos.toggleTweet()
@@ -124,23 +126,26 @@ func procLine(line string) {
 func keepBotAlive() {
 	botFrom = make(chan string)
 	botTo = make(chan string)
+	done := make(chan bool)
 	start := func() {
 		defer close(botTo)
 		bot.NewBot("#radioxenu", "son_of_metabot", "irc.radioxenu.com:6667", botFrom, botTo)
+		done <- true
 	}
 	for {
 		go start()
 		for line := range botFrom {
 			procLine(line)
 		}
+		<-done // wait until previous bot is dead before making another
 	}
 }
 
 func init() {
 	nowPlaying = nowplaying.NewNowPlaying("http://radioxenu.com:8000/relay")
-	tweeter = twit.MakeTweeter("@radioxenu http://tunein.com/radio/Radio-Xenu-s118981/")
 	autos = newAutoState()
-	handleTwit("/tweet")
+	tweeter = twit.MakeTweeter("@radioxenu http://tunein.com/radio/Radio-Xenu-s118981/")
+	handleTwit("/tweet", tweeter)
 	handleMeta()
 }
 
