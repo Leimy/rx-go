@@ -121,9 +121,7 @@ func (b *Bot) loop() {
 	go b.fromIRC(completeSChan)
 
 	lchan := make(chan string)
-	defer func() {
-		close(lchan)
-	}()
+	defer close(lchan)
 
 	// process lines asynchronously from
 	// receiving them.

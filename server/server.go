@@ -160,13 +160,13 @@ func keepBotAlive() {
 	done := make(chan bool)
 	defer close(done)
 	start := func() {
-		botFrom = make(chan string)
-		botTo = make(chan string)
 		defer close(botTo)
 		bot.NewBot("#radioxenu", "son_of_metabot", "irc.radioxenu.com:6667", botFrom, botTo)
 		done <- true
 	}
 	for {
+		botFrom = make(chan string)
+		botTo = make(chan string)
 		go start()
 		for line := range botFrom {
 			procLine(line)
