@@ -58,7 +58,6 @@ func handleTwit(uri string, tweeter twit.Tweeter) {
 	http.HandleFunc(uri, func(w http.ResponseWriter, r *http.Request) {
 		switch method := r.Method; method {
 		case "PUT", "POST":
-			defer r.Body.Close()
 			if _, err := r.Body.Read(message); err != nil && err != io.EOF {
 				log.Printf("Failed to read request: %s %v", message, err)
 			} else {
@@ -76,7 +75,7 @@ func handleStats() {
 	http.HandleFunc("/botstats", func(w http.ResponseWriter, r *http.Request) {
 		switch method := r.Method; method {
 		case "GET":
-			fmt.Fprintf(w, "Restart count: %q", getBotRestarts())
+			fmt.Fprintf(w, "Restart count: %v", getBotRestarts())
 		default:
 			log.Printf("Unsupported method: %s", method)
 		}
@@ -158,10 +157,11 @@ func procLine(line string) {
 
 // Keeps the bot alive, never returns
 func keepBotAlive() {
-	botFrom = make(chan string)
-	botTo = make(chan string)
 	done := make(chan bool)
+	defer close(done)
 	start := func() {
+		botFrom = make(chan string)
+		botTo = make(chan string)
 		defer close(botTo)
 		bot.NewBot("#radioxenu", "son_of_metabot", "irc.radioxenu.com:6667", botFrom, botTo)
 		done <- true
@@ -172,6 +172,7 @@ func keepBotAlive() {
 			procLine(line)
 		}
 		<-done // wait until previous bot is dead before making another
+		incBotRestarts()
 	}
 }
 
