@@ -9,9 +9,18 @@ import (
 	"strings"
 )
 
+var tempBuffer []byte
+
 func parseIcy(rdr *bufio.Reader, c byte) (string, error) {
 	numbytes := int(c) * 16
-	bytes := make([]byte, numbytes)
+	// Check that our reused buffer is sized ok.
+	if len(tempBuffer) < numbytes {
+		tempBuffer = make([]byte, numbytes)
+	}
+
+	// Create a slice of exactly the size we need, and work with it.
+	bytes := tempBuffer[:numbytes]
+
 	n, err := io.ReadFull(rdr, bytes)
 	if err != nil {
 		return "", err
@@ -27,9 +36,8 @@ func extractMetadata(rdr io.Reader, skip int) <-chan string {
 	go func() {
 		defer close(ch)
 		bufrdr := bufio.NewReaderSize(rdr, skip)
+		skipbytes := make([]byte, skip)
 		for {
-			skipbytes := make([]byte, skip)
-
 			_, err := io.ReadFull(bufrdr, skipbytes)
 			if err != nil {
 				return
