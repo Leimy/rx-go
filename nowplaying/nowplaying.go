@@ -44,6 +44,7 @@ func (np *NowPlaying) StartUpdating() {
 	// We own it because it's our write end
 	defer func() {
 		np.Lock()
+		defer np.Unlock()
 		for c := range np.subscribers {
 			close(np.subscribers[c])
 		}
