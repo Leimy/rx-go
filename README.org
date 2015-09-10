@@ -1,10 +1,19 @@
 #+TITLE: Radio Xenu IRC/Twitter interfaces
 #+DATE: [2015-04-26 Sun 11:07]
 
-* Ideas for improvement
+* Bot Command Set
 
-1. Separate bot, metadata and twitter into components (done)
-2. Communicate between components over REST (not done)
+| command     | authorization/role | action                                              |
+|-------------+--------------------+-----------------------------------------------------|
+| ?tweet?     | everyone           | tweets current metadata with current twitter format |
+| ?autotweet? | everyone           | tweet on next metadata change                       |
+| ?lastsong?  | everyone           | Announce to the chat current song metadata          |
+| ?autolast?  | everyone           | Announce to the chat on metadata changes            |
 
-*** Bot Extensibility
-TBD for REST (many ideas)
+** Improvements TBD
+*** Authorization/Roles
+1. DJ - can change format string of tweets/metadata and all Peon stuff
+2. Peons - lowest level available to any chatter
+
+
+
