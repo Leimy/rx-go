@@ -157,14 +157,15 @@ func procLine(line string) {
 
 // Keeps the bot alive, never returns
 func keepBotAlive() {
-	done := make(chan bool)
-	defer close(done)
-	start := func(botFrom, botTo chan string) {
+
+	start := func(close chan struct{}, botFrom, botTo chan string) {
+		defer close(done)
 		defer close(botTo)
 		bot.NewBot("#radioxenu", "son_of_metabot", "irc.radioxenu.com:6667", botFrom, botTo)
 		done <- true
 	}
 	for {
+		done := make(chan bool)
 		botFrom = make(chan string)
 		botTo = make(chan string)
 		go start(botFrom, botTo)
@@ -173,6 +174,7 @@ func keepBotAlive() {
 		}
 		<-done // wait until previous bot is dead before making another
 		incBotRestarts()
+		time.Sleep(5 * time.Second)
 	}
 }
 
