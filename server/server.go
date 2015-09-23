@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/Leimy/rx-go/bot"
 	"github.com/Leimy/rx-go/nowplaying"
@@ -158,17 +159,16 @@ func procLine(line string) {
 // Keeps the bot alive, never returns
 func keepBotAlive() {
 
-	start := func(close chan struct{}, botFrom, botTo chan string) {
+	start := func(done chan struct{}, botFrom, botTo chan string) {
 		defer close(done)
 		defer close(botTo)
 		bot.NewBot("#radioxenu", "son_of_metabot", "irc.radioxenu.com:6667", botFrom, botTo)
-		done <- true
 	}
 	for {
-		done := make(chan bool)
+		done := make(chan struct{})
 		botFrom = make(chan string)
 		botTo = make(chan string)
-		go start(botFrom, botTo)
+		go start(done, botFrom, botTo)
 		for line := range botFrom {
 			procLine(line)
 		}
