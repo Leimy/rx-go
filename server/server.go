@@ -15,9 +15,24 @@ import (
 )
 
 var nowPlaying *nowplaying.NowPlaying
-var botFrom chan string
-var botTo chan string
 var tweeter twit.Tweeter
+
+var botTo struct {
+	sync.RWMutex
+	C chan string
+}
+
+func resetBotTo() {
+	botTo.Lock()
+	defer botTo.Unlock()
+	botTo.C = make(chan string)
+}
+
+func getChan() (chan string) {
+	botTo.RLock()
+	defer botTo.RUnlock()
+	return botTo.C
+}
 
 // just some counters
 var stats struct {
@@ -132,45 +147,45 @@ func metaSubscriber() {
 				tweeter(line)
 			}
 			if autos.getLast() {
-				botTo <- line
+				getChan() <- line
 			}
 		}
 	}
 }
 
 // Commands from IRC
-func procLine(line string) {
+func procIRCLine(line string) {
 	log.Printf("got: %q", line)
 	switch line {
 	case "?lastsong?":
-		botTo <- nowPlaying.Get()
+		getChan() <- nowPlaying.Get()
 	case "?tweet?":
 		//TODO: use the REST endpoint
 		tweeter(nowPlaying.Get())
 	case "?autotweet?":
 		autos.toggleTweet()
-		botTo <- fmt.Sprintf("Autotweet is %v", autos.getTweet())
+		getChan() <- fmt.Sprintf("Autotweet is %v", autos.getTweet())
 	case "?autolast?":
 		autos.toggleLast()
-		botTo <- fmt.Sprintf("Autolast is %v", autos.getLast())
+		getChan() <- fmt.Sprintf("Autolast is %v", autos.getLast())
 	}
 }
 
 // Keeps the bot alive, never returns
 func keepBotAlive() {
 
-	start := func(done chan struct{}, botFrom, botTo chan string) {
+	start := func(done chan struct{}, botFrom chan string) {
 		defer close(done)
-		defer close(botTo)
-		bot.NewBot("#radioxenu", "son_of_metabot", "irc.radioxenu.com:6667", botFrom, botTo)
+		resetBotTo()
+		//		bot.NewBot("#radioxenu", "son_of_metabot2", "irc.radioxenu.com:6667", botFrom, getChan())
+		bot.NewBot("#radioxenu", "son_of_metabot2", "localhost:6667", botFrom, getChan())
 	}
 	for {
 		done := make(chan struct{})
-		botFrom = make(chan string)
-		botTo = make(chan string)
-		go start(done, botFrom, botTo)
+		botFrom := make(chan string)
+		go start(done, botFrom)
 		for line := range botFrom {
-			procLine(line)
+			procIRCLine(line)
 		}
 		<-done // wait until previous bot is dead before making another
 		incBotRestarts()
