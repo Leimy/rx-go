@@ -177,8 +177,7 @@ func keepBotAlive() {
 	start := func(done chan struct{}, botFrom chan string) {
 		defer close(done)
 		resetBotTo()
-		//		bot.NewBot("#radioxenu", "son_of_metabot2", "irc.radioxenu.com:6667", botFrom, getChan())
-		bot.NewBot("#radioxenu", "son_of_metabot2", "localhost:6667", botFrom, getChan())
+		bot.NewBot("#radioxenu", "son_of_metabot", "irc.radioxenu.com:6667", botFrom, getChan())
 	}
 	for {
 		done := make(chan struct{})
