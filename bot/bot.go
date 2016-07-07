@@ -77,7 +77,7 @@ func (b *Bot) fromIRC(completeSChan chan<- string) {
 	defer close(completeSChan)
 	scanner := bufio.NewScanner(b)
 	for scanner.Scan() {
-		completeSChan <- string(filterPrintable([]byte(scanner.Text())))
+		completeSChan <- string(filterPrintable(scanner.Bytes()))
 	}
 }
 
