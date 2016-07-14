@@ -9,6 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"syscall"
+	"os"
+
 	"github.com/Leimy/rx-go/bot"
 	"github.com/Leimy/rx-go/nowplaying"
 	"github.com/Leimy/rx-go/twit"
@@ -106,7 +109,7 @@ type autoState struct {
 }
 
 func newAutoState() *autoState {
-	return &autoState{sync.RWMutex{}, false, false}
+	return &autoState{sync.RWMutex{}, true, false}
 }
 
 func (as *autoState) getTweet() bool {
@@ -177,7 +180,7 @@ func keepBotAlive() {
 	start := func(done chan struct{}, botFrom chan string) {
 		defer close(done)
 		resetBotTo()
-		bot.NewBot("#radioxenu", "son_of_metabot", "irc.radioxenu.com:6667", botFrom, getChan())
+		bot.NewBot("#radioxenu", "revenge_of_metabot", "irc.radioxenu.com:6667", botFrom, getChan())
 	}
 	for {
 		done := make(chan struct{})
@@ -199,6 +202,14 @@ func init() {
 	handleTwit("/tweet", tweeter)
 	handleMeta()
 	handleStats()
+	http.HandleFunc("/reset", func(w http.ResponseWriter, r *http.Request) {
+		err := syscall.Exec("./restart.sh",[]string{"./restart.sh"}, os.Environ())
+		if err != nil {
+			fmt.Fprintf(w, "reset failed: %s (Call Leimy)\n", err)
+		} else {
+			fmt.Fprintf(w, "<HTML><BODY><MARQUEE>Restarting, please wait...</MARQUEE></BODY></HTML>")
+		}
+	})
 }
 
 func main() {
