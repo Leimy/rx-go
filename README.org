@@ -11,10 +11,6 @@
 | ?autolast?  | everyone           | Announce to the chat on metadata changes            |
 
 ** Improvements TBD
-*** Authorization/Roles
-1. DJ - can change format string of tweets/metadata and all Peon stuff
-2. Peons - lowest level available to any chatter
-
 *** New command ideas
 1. Track requests from the chat
 2. Track requests to metabot (on twitter!)
